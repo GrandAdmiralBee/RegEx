@@ -27,7 +27,7 @@ int AmfReader::ReadAmf()
     return parseAmf();
 }
 
-int parseAmf()
+int AmfReader::parseAmf()
 {
     pAmf = new Fcp::AmfData();
 
@@ -151,7 +151,7 @@ int parseAmf()
     return 0;
 }
 
-QString rmdq(const QString& str)
+QString AmfReader::rmdq(const QString& str)
 {
     std::string stdstr = str.toStdString();
     stdstr.erase(remove( stdstr.begin(), stdstr.end(), '\"'),stdstr.end());
@@ -160,7 +160,7 @@ QString rmdq(const QString& str)
     return res;
 }
 
-Fcp::PadDestination_t parseDestinationGroup(const QString& line)
+Fcp::PadDestination_t AmfReader::parseDestinationGroup(const QString& line)
 {
     //For logic
     rx.setPattern(logicRx);
@@ -190,7 +190,7 @@ Fcp::PadDestination_t parseDestinationGroup(const QString& line)
     return Fcp::PadDestination_t::DEST_UNDEFINED;
 }
 
-int parseAutoOrManualGroup(const QString& line)
+int AmfReader::parseAutoOrManualGroup(const QString& line)
 {
     int manual = -1;
 
@@ -209,7 +209,7 @@ int parseAutoOrManualGroup(const QString& line)
     return manual;
 }
 
-std::vector<std::string>* parseListGroup(const QString& line, int offset)
+std::vector<std::string>* AmfReader::parseListGroup(const QString& line, int offset)
 {
     std::vector<std::string>* vec = new std::vector<std::string>();
     rx.setPattern(quotedTextRx);
@@ -229,7 +229,7 @@ std::vector<std::string>* parseListGroup(const QString& line, int offset)
     return vec;
 }
 
-void parseLayerGroup(const QString& line)
+void AmfReader::parseLayerGroup(const QString& line)
 {
     QString compId;
     QString bumpId;
@@ -252,7 +252,7 @@ void parseLayerGroup(const QString& line)
     pAmf->AddLayer(compId.toLocal8Bit().data(), bumpId.toLocal8Bit().data(), layerId);
 }
 
-void parseTraceGroup(const QString& line)
+void AmfReader::parseTraceGroup(const QString& line)
 {
     QString compId;
     QString bumpId;
@@ -307,7 +307,7 @@ void parseTraceGroup(const QString& line)
     }
 }
 
-void parseAssignGroup(const QString& line){
+void AmfReader::parseAssignGroup(const QString& line){
     QString signalName;
     rx.setPattern(quotedTextRx);
     match = rx.match(line);
@@ -458,7 +458,7 @@ void parseAssignGroup(const QString& line){
     }
 }
 
-void parseBallsGroup(const QString& line)
+void AmfReader::parseBallsGroup(const QString& line)
 {
     QString areaName;
     rx.setPattern(quotedTextRx);
@@ -475,7 +475,7 @@ void parseBallsGroup(const QString& line)
     pAmf->AddAreaBalls(areaName.toLocal8Bit().data(), autoOrManual, names, destination);
 }
 
-void parseBumpsGroup(const QString& line)
+void AmfReader::parseBumpsGroup(const QString& line)
 {
     QString areaName;
     QString componentId;
@@ -495,7 +495,7 @@ void parseBumpsGroup(const QString& line)
     pAmf->AddAreaBumps(areaName.toLocal8Bit().data(), autoOrManual, componentId.toLocal8Bit().data(), names, destination);
 }
 
-void parseAreaGroup(const QString& line)
+void AmfReader::parseAreaGroup(const QString& line)
 {
     QString areaName;
     rx.setPattern(quotedTextRx);
@@ -511,7 +511,7 @@ void parseAreaGroup(const QString& line)
 }
 
 
-void parseSignalsGroup(const QString& line)
+void AmfReader::parseSignalsGroup(const QString& line)
 {
     QString signalName;
     rx.setPattern(quotedTextRx);
@@ -529,7 +529,7 @@ void parseSignalsGroup(const QString& line)
     pAmf->AddGroupSignals(signalName.toLocal8Bit().data(), autoOrManual, names);
 }
 
-void parseGroup(const QString& line)
+void AmfReader::parseGroup(const QString& line)
 {
     rx.setPattern(quotedTextRx);
     matchIter = rx.globalMatch(line);
@@ -545,7 +545,7 @@ void parseGroup(const QString& line)
     }
 }
 
-void parseVersionGroup(const QString& line)
+void AmfReader::parseVersionGroup(const QString& line)
 {
     rx.setPattern(INTEGER);
     match = rx.match(line);
@@ -558,7 +558,7 @@ void parseVersionGroup(const QString& line)
     return;
 }
 
-void parsePackageGroup(const QString& line)
+void AmfReader::parsePackageGroup(const QString& line)
 {
     QString packageName;
 
@@ -631,7 +631,7 @@ void parsePackageGroup(const QString& line)
     }
 }
 
-void parseComponentGroup(const QString& line)
+void AmfReader::parseComponentGroup(const QString& line)
 {
     const char* componentId;
     // Component name
@@ -772,7 +772,7 @@ void parseComponentGroup(const QString& line)
     }
 }
 
-void parseItineraryGroup(const QString& line)
+void AmfReader::parseItineraryGroup(const QString& line)
 {
     QString res;
     rx.setPattern(undefinedRouteRx);
@@ -799,7 +799,7 @@ void parseItineraryGroup(const QString& line)
     pAmf->SetItinerary(res.toLocal8Bit().data());
 }
 
-void parseModeGroup(const QString& line)
+void AmfReader::parseModeGroup(const QString& line)
 {
     rx.setPattern(quotedTextRx);
     match = rx.match(line);

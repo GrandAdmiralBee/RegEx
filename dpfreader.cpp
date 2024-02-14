@@ -1,81 +1,5 @@
 #include "dpfreader.h"
 
-static QRegularExpression rx;
-static QRegularExpressionMatch match;
-static QRegularExpressionMatchIterator matchIter;
-
-static QString WS = QString("[ \t\v\f\r]");
-static QString INTEGER = QString("[+-]?[0-9]+");
-static QString STRING = QString("[\"][^\"\f\r\n]*[\"]");
-static QString WORD = QString("[a-zA-Z0-9]*");
-static QString TRACE_POINT = QString(INTEGER + WS + "*\":\"" + WS + "*" + INTEGER + WS + "*\",\""  + WS + "*" + INTEGER);
-static QString TRACE_WIDTH = QString("[wW]" + WS + "*\"=\"" + WS + "*" + INTEGER);
-static QString pointRx = QString(INTEGER + "[:]" + INTEGER);
-static QString pointListRx = QString("[^{]*");
-
-static QString versionRx = QString("^" + WS + "*VERSION" + WS);
-static QString dieRx = QString("^" + WS + "*DIE" + WS);
-static QString coreAreaRx = QString("^" + WS + "*CORE_AREA" + WS);
-static QString technologyRx = QString("^" + WS + "*TECHNOLOGY" + WS);
-static QString technologyFileRx = QString("^" + WS + "*TECHNOLOGY_FILE" + WS);
-static QString gdsSourceFileRx = QString("^" + WS + "*GDS_SOURCE_FILE" + WS);
-static QString gdsStructureNameRx = QString("^" + WS + "*GDS_SOURCE_NAME" + WS);
-static QString erpFileRx = QString("^" + WS + "*ERP_FILE" + WS);
-static QString bumpShapeRx = QString("^" + WS + "*BUMP_SHAPE" + WS);
-static QString bumpRx = QString("^" + WS + "*BUMP" + WS);
-static QString padcellRx = QString("^" + WS + "*PADCELL" + WS);
-static QString groupRx = QString("^" + WS + "*GROUP" + WS);
-static QString traceRx = QString("^" + WS + "*TRACE" + WS);
-static QString patterncellRx = QString("^" + WS + "*PATTERNCELL" + WS);
-static QString textRx = QString("^" + WS + "*TEXT" + WS);
-
-static QString placeRx = QString("\{PLACE\}");
-static QString bumpNameRx = QString("\{BUMP_NAME\}");
-static QString pinNameRx = QString("\{PIN_NAME\}");
-static QString rotationRx = QString("\{ROTATION\}");
-static QString rowRx = QString("\{ROW\}");
-static QString bpListRx = QString("\{BP\#\}");
-static QString pcListRx = QString("\{PC\#\}");
-static QString masterNameRx = QString("{MASTER_NAME}");
-static QString instanceNameRx = QString("\{INSTANCE_NAME\}");
-static QString signalNameRx = QString("\{SIGNAL_NAME\}");
-static QString typeRx = QString("\{TYPE\}");
-static QString textSubRx = QString("\{TEXT\}");
-static QString justifyRx = QString("\{JUSTIFY\}");
-static QString staggeredRx = QString("STAGGERED");
-
-static DpfReader::KeyValues kvs;
-static std::vector<DpfReader::KeyValues> keyVal;
-
-static int ParseDpf();
-static QString rmdq(const QString& str);
-static std::vector<int> parsePointList(const QString& line, const QString& regex);
-static void parseVersionGroup(const QString& line);
-static void parseDieGroup(const QString& line);
-static void parseCoreAreaGroup(const QString& line);
-static void parseTechnologyGroup(const QString& line);
-static void parseBumpShapeGroup(const QString& line);
-static void parseBumpGroup(const QString& line);
-static void parsePadcellGroup(const QString& line);
-static void parsePatterncellGroup(const QString& line);
-
-//Dpf values
-static void parseDpfValues(const QString& line);
-static std::vector<int> parsePlaceValues(const QString& line);
-static int parseRowValues(const QString& line);
-static Fcp::Rotation parseRotationValues(const QString& line);
-static std::vector<int> parseBpListValues(const QString& line);
-static std::vector<int> parsePcListValues(const QString& line);
-static QString parseMasterName(const QString& line);
-static QString parseInstanceName(const QString& line);
-static QString parseSignalName(const QString& line);
-static QString parseBumpName(const QString& line);
-static QString parsePinName(const QString& line);
-static QString typeName(const QString& line);
-static QString textName(const QString& line);
-static QString justifyName(const QString& line);
-static QString staggeredName(const QString& line);
-
 DpfReader::DpfReader()
 {
 
@@ -86,7 +10,7 @@ int DpfReader::ReadDpf()
     return ParseDpf();
 }
 
-int ParseDpf()
+int DpfReader::ParseDpf()
 {
     QFile f("C:/Users/user/Documents/RegEx/e3s.dpf");
     if (!f.open(QFile::ReadOnly | QFile::Text)) {
@@ -170,12 +94,39 @@ int ParseDpf()
             parsePatterncellGroup(line);
             continue;
         }
+
+        //Gds file group
+        rx.setPattern(gdsSourceFileRx);
+        match = rx.match(line);
+        if (match.hasMatch())
+        {
+            parseGdsSourceFileGroup(line);
+            continue;
+        }
+
+        //Group
+        rx.setPattern(groupRx);
+        match = rx.match(line);
+        if (match.hasMatch())
+        {
+            parseGroup(line);
+            continue;
+        }
+
+        //Trace group
+        rx.setPattern(traceRx);
+        match = rx.match(line);
+        if (match.hasMatch())
+        {
+            parseTraceGroup(line);
+            continue;
+        }
     }
 
     return 0;
 }
 
-QString rmdq(const QString& str)
+QString DpfReader::rmdq(const QString& str)
 {
     std::string stdstr = str.toStdString();
     stdstr.erase(remove( stdstr.begin(), stdstr.end(), '\"'),stdstr.end());
@@ -184,9 +135,9 @@ QString rmdq(const QString& str)
     return res;
 }
 
-std::vector<int> parsePointList(const QString& line, const QString& regex)
+std::vector<int> DpfReader::parsePointList(const QString& line, const QString& regex)
 {
-    rx.setPattern(regex + pointListRx);
+    rx.setPattern(regex + integerListRx);
     std::vector<int> pointList;
     match = rx.match(line);
     if (match.hasMatch())
@@ -203,7 +154,120 @@ std::vector<int> parsePointList(const QString& line, const QString& regex)
     return pointList;
 }
 
-void parsePatterncellGroup(const QString& line)
+void DpfReader::parseTraceGroup(const QString& line)
+{
+    int trace;
+
+    rx.setPattern(traceRx + "(" + INTEGER + ")");
+    match = rx.match(line);
+    if (match.hasMatch())
+    {
+        trace = match.captured(1).toInt();
+    }
+
+    rx.setPattern(TRACE_POINT + "|" + TRACE_WIDTH);
+    matchIter = rx.globalMatch(line);
+    while(matchIter.hasNext())
+    {
+        QString str = matchIter.next().captured();
+        //Point
+        rx.setPattern(TRACE_POINT);
+        match = rx.match(str);
+        if (match.hasMatch())
+        {
+            int layer = match.captured(1).toInt();
+            int x = match.captured(2).toInt();
+            int y = match.captured(3).toInt();
+        }
+
+        //Width
+        rx.setPattern(TRACE_WIDTH);
+        match = rx.match(str);
+        if (match.hasMatch())
+        {
+            int width = match.captured(1).toInt();
+        }
+
+    }
+
+
+    qDebug() << trace;
+}
+
+void DpfReader::parseGroup(const QString& line)
+{
+    QString name;
+    rx.setPattern(groupRx + "(" + STRING + ")");
+    match = rx.match(line);
+    if (match.hasMatch())
+    {
+        name = rmdq(match.captured(1));
+    }
+
+    std::vector<int> nums = parsePointList(line, "");
+}
+
+void DpfReader::parseTextGroup(const QString& line)
+{
+    QString type = parseType(line);
+    Fcp::Rotation rotate = parseRotationValues(line);
+    std::vector<int> place = parsePlaceValues(line);
+    QString text = parseText(line);
+}
+
+void DpfReader::parseGdsStructureFileGroup(const QString& line)
+{
+    QString fileName;
+    rx.setPattern(gdsStructureNameRx + "(" + STRING + ")");
+    match = rx.match(line);
+    if (match.hasMatch())
+    {
+        fileName = rmdq(match.captured(1));
+    }
+
+    //qDebug() << fileName;
+}
+
+void DpfReader::parseErpFileGroup(const QString& line)
+{
+    QString fileName;
+    rx.setPattern(erpFileRx + "(" + STRING + ")");
+    match = rx.match(line);
+    if (match.hasMatch())
+    {
+        fileName = rmdq(match.captured(1));
+    }
+
+    //qDebug() << fileName;
+}
+
+void DpfReader::parseTechnologyFileGroup(const QString& line)
+{
+    QString fileName;
+    rx.setPattern(technologyFileRx + "(" + STRING + ")");
+    match = rx.match(line);
+    if (match.hasMatch())
+    {
+        fileName = rmdq(match.captured(1));
+    }
+
+    //qDebug() << fileName;
+}
+
+void DpfReader::parseGdsSourceFileGroup(const QString& line)
+{
+    QString fileName;
+    rx.setPattern(gdsSourceFileRx + "(" + STRING + ")");
+    match = rx.match(line);
+    if (match.hasMatch())
+    {
+        fileName = rmdq(match.captured(1));
+    }
+
+    //qDebug() << fileName;
+}
+
+void DpfReader::parsePatterncellGroup(const QString& line)
 {
     QString patterncellName;
 
@@ -212,7 +276,7 @@ void parsePatterncellGroup(const QString& line)
     if (match.hasMatch())
     {
         patterncellName = rmdq(match.captured(1));
-        qDebug() << patterncellName;
+        //qDebug() << patterncellName;
     }
 
     std::vector<int> pc = parsePcListValues(line);
@@ -221,7 +285,7 @@ void parsePatterncellGroup(const QString& line)
 
 }
 
-void parsePadcellGroup(const QString& line)
+void DpfReader::parsePadcellGroup(const QString& line)
 {
     int padcellId;
 
@@ -242,7 +306,7 @@ void parsePadcellGroup(const QString& line)
     //Justify
 }
 
-void parseBumpGroup(const QString& line)
+void DpfReader::parseBumpGroup(const QString& line)
 {
     int bumpId;
 
@@ -260,7 +324,7 @@ void parseBumpGroup(const QString& line)
 
 }
 
-void parseDieGroup(const QString& line)
+void DpfReader::parseDieGroup(const QString& line)
 {
     rx.setPattern(STRING);
     match = rx.match(line);
@@ -270,10 +334,12 @@ void parseDieGroup(const QString& line)
     }
 
     std::vector<int> place = parsePlaceValues(line);
+    qDebug() << place;
     Fcp::Rotation rotate = parseRotationValues(line);
+    qDebug() << rotate;
 }
 
-void parseVersionGroup(const QString& line)
+void DpfReader::parseVersionGroup(const QString& line)
 {
     rx.setPattern(INTEGER);
     match = rx.match(line);
@@ -291,12 +357,12 @@ void parseVersionGroup(const QString& line)
     return;
 }
 
-void parseBumpShapeGroup(const QString& line)
+void DpfReader::parseBumpShapeGroup(const QString& line)
 {
-    std::vector<int> list = parsePointList(line, bumpShapeRx);
+    std::vector<int> list = parsePlaceValues(line);
 }
 
-void parseTechnologyGroup(const QString& line)
+void DpfReader::parseTechnologyGroup(const QString& line)
 {
     rx.setPattern(STRING);
     match = rx.match(line);
@@ -306,16 +372,16 @@ void parseTechnologyGroup(const QString& line)
     }
 }
 
-void parseCoreAreaGroup(const QString& line)
+void DpfReader::parseCoreAreaGroup(const QString& line)
 {
-    //TODO!
+    std::vector<int> points = parsePointList(line, coreAreaRx);
 }
 
-QString parseTextName(const QString& line)
+QString DpfReader::parseText(const QString& line)
 {
     QString textName;
 
-    rx.setPattern(textRx + WS + STRING);
+    rx.setPattern(textSubRx + WS + STRING);
     match = rx.match(line);
     if (match.hasMatch())
     {
@@ -328,7 +394,7 @@ QString parseTextName(const QString& line)
     return textName;
 }
 
-QString parseTypeName(const QString& line)
+QString DpfReader::parseType(const QString& line)
 {
     QString typeName;
 
@@ -345,7 +411,7 @@ QString parseTypeName(const QString& line)
     return typeName;
 }
 
-QString parsePinName(const QString& line)
+QString DpfReader::parsePinName(const QString& line)
 {
     QString pinName;
 
@@ -366,7 +432,7 @@ QString parsePinName(const QString& line)
     return pinName;
 }
 
-QString parseBumpName(const QString& line)
+QString DpfReader::parseBumpName(const QString& line)
 {
     QString bumpName;
 
@@ -382,13 +448,13 @@ QString parseBumpName(const QString& line)
     if (match.hasMatch())
     {
         bumpName = match.captured(1);
-        qDebug() << bumpName;
+        //qDebug() << bumpName;
     }
 
     return bumpName;
 }
 
-QString parseSignalName(const QString& line)
+QString DpfReader::parseSignalName(const QString& line)
 {
     QString signalName;
 
@@ -405,7 +471,7 @@ QString parseSignalName(const QString& line)
     return signalName;
 }
 
-QString parseInstanceName(const QString& line)
+QString DpfReader::parseInstanceName(const QString& line)
 {
     QString instanceName;
 
@@ -422,7 +488,7 @@ QString parseInstanceName(const QString& line)
     return instanceName;
 }
 
-QString parseMasterName(const QString& line)
+QString DpfReader::parseMasterName(const QString& line)
 {
     QString masterName;
 
@@ -439,17 +505,17 @@ QString parseMasterName(const QString& line)
     return masterName;
 }
 
-std::vector<int> parseBpListValues(const QString& line)
+std::vector<int> DpfReader::parseBpListValues(const QString& line)
 {
     return parsePointList(line, bpListRx);
 }
 
-std::vector<int> parsePcListValues(const QString& line)
+std::vector<int> DpfReader::parsePcListValues(const QString& line)
 {
     return parsePointList(line, pcListRx);
 }
 
-Fcp::Rotation parseRotationValues(const QString& line)
+Fcp::Rotation DpfReader::parseRotationValues(const QString& line)
 {
     Fcp::Rotation rotate;
 
@@ -502,7 +568,7 @@ Fcp::Rotation parseRotationValues(const QString& line)
     return rotate;
 }
 
-int parseRowValues(const QString& line)
+int DpfReader::parseRowValues(const QString& line)
 {
     int row = 0;
     rx.setPattern(rowRx + WS + INTEGER);
@@ -519,7 +585,7 @@ int parseRowValues(const QString& line)
     return row;
 }
 
-std::vector<int> parsePlaceValues(const QString& line)
+std::vector<int> DpfReader::parsePlaceValues(const QString& line)
 {
     std::vector<int> values;
     //Rect
@@ -541,6 +607,8 @@ std::vector<int> parsePlaceValues(const QString& line)
         values.push_back(b);
         values.push_back(c);
         values.push_back(d);
+
+        return values;
     }
 
     //Point
@@ -558,9 +626,9 @@ std::vector<int> parsePlaceValues(const QString& line)
 
         values.push_back(x);
         values.push_back(y);
-    }
 
-    return values;
+        return values;
+    }
 }
 
 
