@@ -25,6 +25,8 @@ set( project_sources
    AmfReader.h
    dpfreader.h
    dpfreader.cpp
+   pkgparser.cpp
+   pkgparser.h
 )
 
 add_executable(amf_reader

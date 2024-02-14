@@ -1,0 +1,95 @@
+
+$PKG 1.0  # rest-line comment
+
+Units: uM,0
+
+Name: "BGA_TEST"
+
+Pitch_x: 1000
+
+Pitch_y: 1000
+
+# whole-line comment
+
+Sx: 0 
+Sy: 0 
+Extents:((0,0)(4000,4000))
+Padstack "DUMMY_PAD" [
+   Circle
+   {
+      Cut: false
+      LineColor: (255, 0, 0)
+      LineWidth: 1
+      FillingColor: (0, 255, 0)
+      Fill: true
+      Location: (10, 8)
+      Radius: 7
+   }
+
+   Rect {
+      Cut: false
+      LineColor: (0, 0, 255)
+      LineWidth: 1
+      FillingColor: (100, 255, 0)
+      Fill: false
+      Location: (5, 4)
+      Point2: (15,12)
+   }
+
+   RegPoly {
+      Cut: true
+      LineColor: (1, 0, 1)
+      LineWidth: 1
+      FillingColor: (80, 90, 60)
+      Fill: false
+      Location: (10, 8)
+      VertexCount: 3
+      Radius: 3
+      Type: false
+      AngleType: true
+      Angle: 0
+   }
+
+   Poly {
+      Cut: false
+      LineColor: (50, 0, 100)
+      LineWidth: 1
+      FillingColor: (10, 50, 150)
+      Fill: true
+      Location: (1, 1)
+      Points: ((4,0) (4,3) , (0,3))   # 4 vertexes: implicit vertex is (0,0)
+   }
+
+]
+
+Padstack "test_padstack" [
+   Circle
+   {
+      Cut: false
+      LineColor: (100, 100, 100)
+      LineWidth: 1
+      FillingColor: (100, 100, 100)
+      Fill: true
+      Location: (0, 0)
+      Radius: 250
+   }
+
+
+]
+
+ 
+PINLIST	  	#  iii 
+  	[	 	
+"A1"	*	"test_padstack"	500.0	500.0	"1" (5.0,4.0,3.0) "group" "master1" "master2"
+"B1"	"test_padstack"	1500.0	500.0	"2" * * * *
+"C1"	"test_padstack"	2500.0	500.0	"3"
+"A2"	"test_padstack"	500.0	1500.0	
+"B2"	"test_padstack"	1500.0	1500.0	
+"C2"	"test_padstack"	2500.0	1500.0	
+"A3"	"test_padstack"	500.0	2500.0	"7"
+"B3"	"test_padstack"	1500.0	2500.0	"8"
+"C3"	"test_padstack"	2500.0	2500.0	"9"
+]
+#ww
+# commment
+

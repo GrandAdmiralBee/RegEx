@@ -123,6 +123,8 @@ int DpfReader::ParseDpf()
         }
     }
 
+    f.close();
+
     return 0;
 }
 

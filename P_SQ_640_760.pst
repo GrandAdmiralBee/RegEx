@@ -1,0 +1,27 @@
+$PST 1.0
+Units:uM,1
+Padstack "P_SQ_640_760"
+[
+	"L1"
+	Rect
+	{
+		Location:(-255,-320)
+		LineWidth:0
+		LineColor:(255,0,0)
+		FillingColor:(255,0,0)
+		Fill:true
+		Cut:false
+		Point2:(510,640)
+	}
+	"NEG"
+	Rect
+	{
+		Location:(-320,-380)
+		LineWidth:0
+		LineColor:(0,0,0)
+		FillingColor:(0,0,0)
+		Fill:true
+		Cut:true
+		Point2:(640,760)
+	}
+]
