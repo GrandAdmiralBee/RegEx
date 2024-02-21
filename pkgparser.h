@@ -6,12 +6,21 @@
 #include<QRegularExpression>
 #include<QRegularExpressionMatch>
 #include<QRegularExpressionMatchIterator>
+#include "commonstruct.h"
+#include "defs.h"
 
 class PkgParser
 {
 public:
     PkgParser();
     int readPkg();
+
+    enum SignalDir{
+        IN,
+        OUT,
+        INOUT,
+        UNDEF
+    };
 private:
     int parsePkg();
 
@@ -25,14 +34,29 @@ private:
     void parseS(const QString& line);
     void parseExtents(const QString& line);
     void parsePinList(QTextStream& in);
-    //void parsePinFunctions(const QString& line);
-    //void parsePadstackDescList(const QString& line);
+    void parsePinFunctions(QTextStream& in);
+    void parsePadstackDescList(QTextStream& in);
 
     void parsePartNumber(const QString& line);
 //    void parseOutlineDesc(const QString& line);
 //    void parsePadstackDesc(const QString& line);
 
-    void parseColor(const QString& line);
+    //PinList values
+    QString parseName(const QString& line);
+    SignalDir parsePinDir(const QString& line);
+    float parseCoord(const QString& line);
+    ME_color* parseColor(const QString& line);
+
+    //PadStack values
+    bool parseBool(const QString& line);
+    ME_point* parsePoint(const QString& line);
+    std::vector<ME_point> parsePoints(const QString& line);
+
+    void parseCircle(QTextStream& in);
+    void parseRect(QTextStream& in);
+    void parseRegPoly(QTextStream& in);
+    void parsePoly(QTextStream& in);
+    void parsePolyArc(QTextStream& in);
 
     QRegularExpression rx = QRegularExpression();
     QRegularExpressionMatch match = QRegularExpressionMatch();

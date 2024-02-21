@@ -76,12 +76,11 @@ Padstack "test_padstack" [
 
 
 ]
-
  
 PINLIST	  	#  iii 
   	[	 	
-"A1"	*	"test_padstack"	500.0	500.0	"1" (5.0,4.0,3.0) "group" "master1" "master2"
-"B1"	"test_padstack"	1500.0	500.0	"2" * * * *
+"A1"	IN	"test_padstack"	500.1	500.0	"1" (5.0,4.0,3.0) "group" "master1" "master2"
+"B1"	*	"test_padstack"	1500.0	500.0	"2" * * * *
 "C1"	"test_padstack"	2500.0	500.0	"3"
 "A2"	"test_padstack"	500.0	1500.0	
 "B2"	"test_padstack"	1500.0	1500.0	
@@ -93,3 +92,7 @@ PINLIST	  	#  iii
 #ww
 # commment
 
+FUNCTIONS
+[
+"SIGNAL" "LEVEL" IN "FUNCTION"
+]
