@@ -2,7 +2,8 @@
 #include <QTextStream>
 #include <QDebug>
 #include <QFile>
-
+#include "FcpPkgReader.h"
+#include "FcpPkgReaderStructs.h"
 
 
 PkgParser::PkgParser()
@@ -12,6 +13,7 @@ PkgParser::PkgParser()
 
 int PkgParser::readPkg()
 {
+    //callback_ifc = new PKGReaderCallbackI();
     return parsePkg();
 }
 
@@ -71,8 +73,8 @@ void PkgParser::parsePkgFile(QTextStream& textStream)
         match = rx.match(line);
         if (match.hasMatch())
         {
-            float version = match.captured(1).toFloat();
-            continue;
+            int version = (int)match.captured(1).toFloat();
+            //callback_ifc->PkgTypeCallback(version);
         }
 
         //Name
@@ -96,6 +98,7 @@ void PkgParser::parsePkgFile(QTextStream& textStream)
         if(match.hasMatch())
         {
             parseUnitsDesc(line);
+            continue;
         }
 
         //Extents
@@ -104,6 +107,7 @@ void PkgParser::parsePkgFile(QTextStream& textStream)
         if(match.hasMatch())
         {
             parseExtents(line);
+            continue;
         }
 
         //Pinlist
@@ -112,6 +116,7 @@ void PkgParser::parsePkgFile(QTextStream& textStream)
         if(match.hasMatch())
         {
             parsePinList(textStream);
+            continue;
         }
 
         //PinFunctions
@@ -120,6 +125,16 @@ void PkgParser::parsePkgFile(QTextStream& textStream)
         if(match.hasMatch())
         {
             parsePinFunctions(textStream);
+            continue;
+        }
+
+        //Padstack Desc
+        rx.setPattern(padstackRx);
+        match = rx.match(line);
+        if(match.hasMatch())
+        {
+            parsePadstackDescList(textStream);
+            continue;
         }
     }
 }
@@ -135,7 +150,8 @@ void PkgParser::parseFptFile(QTextStream& textStream)
         match = rx.match(line);
         if (match.hasMatch())
         {
-            float version = match.captured(1).toFloat();
+            int version = (int)match.captured(1).toFloat();
+            //callback_ifc->PkgTypeCallback(version);
         }
 
         //Units
@@ -184,18 +200,20 @@ void PkgParser::parsePstFile(QTextStream& textStream)
         match = rx.match(line);
         if (match.hasMatch())
         {
-            float version = match.captured(1).toFloat();
+            int version = (int)match.captured(1).toFloat();
+            //callback_ifc->PkgTypeCallback(version);
         }
     }
 }
 
 void PkgParser::parsePkgName(const QString& line)
 {
-    rx.setPattern(STRING);
+    rx.setPattern(nameRx + WSEATER + STRING);
     match = rx.match(line);
     if(match.hasMatch())
     {
-        qDebug() << match.captured(1);
+        QString name = match.captured(1);
+        //callback_ifc->PkgNameCallback(name.toStdString());
     }
 }
 
@@ -206,7 +224,8 @@ void PkgParser::parsePitch(const QString& line)
     match = rx.match(line);
     if(match.hasMatch())
     {
-        qDebug() << match.captured(1);
+        float x = match.captured(1).toFloat();
+        //callback_ifc->HorizontalPitchCallback(x);
     }
 
     // Pitch Y
@@ -214,7 +233,8 @@ void PkgParser::parsePitch(const QString& line)
     match = rx.match(line);
     if(match.hasMatch())
     {
-        qDebug() << match.captured(1);
+        float y = match.captured(1).toFloat();
+        //callback_ifc->VerticalPitchCallback(y);
     }
 }
 
@@ -225,7 +245,8 @@ void PkgParser::parseS(const QString& line)
     match = rx.match(line);
     if(match.hasMatch())
     {
-        qDebug() << match.captured(1);
+        float x = match.captured(1).toFloat();
+        //callback_ifc->SxCallback(x);
     }
 
     // S Y
@@ -233,48 +254,88 @@ void PkgParser::parseS(const QString& line)
     match = rx.match(line);
     if(match.hasMatch())
     {
-        qDebug() << match.captured(1);
+        float y = match.captured(1).toFloat();
+        //callback_ifc->SyCallback(y);
     }
 }
 
 void PkgParser::parseUnitsDesc(const QString& line)
 {
-    rx.setPattern("(" + uMRx + "|"  + dMRx + "|"  + cMRx + "|"  + mMRx + "|"  + nMRx + "|"  + thRx + "|"  + milRx + "),(" + FLOAT_NUM + ")");
+    rx.setPattern("(" + uMRx + "|" + meterRx + "|"  + dMRx + "|"  + cMRx + "|"  + mMRx + "|"  + nMRx + "|"  + thRx + "|"  + milRx + "),(" + FLOAT_NUM + ")");
     match = rx.match(line);
     if(match.hasMatch())
     {
-        qDebug() << match.captured(1) << match.captured(2);
+        int type = Fcp::MEASURE_UNIT_UD;
+        if(line.contains(uMRx)){
+            type = Fcp::MEASURE_UNIT_UM;
+        }
+        if(line.contains(dMRx)){
+            type = Fcp::MEASURE_UNIT_DM;
+        }
+        if(line.contains(cMRx)){
+            type = Fcp::MEASURE_UNIT_CM;
+        }
+        if(line.contains(mMRx)){
+            type = Fcp::MEASURE_UNIT_MM;
+        }
+        if(line.contains(nMRx)){
+            type = Fcp::MEASURE_UNIT_NM;
+        }
+        if(line.contains(thRx)){
+            type = Fcp::MEASURE_UNIT_TH;
+        }
+        if(line.contains(milRx)){
+            type = Fcp::MEASURE_UNIT_MIL;
+        }
+        if(line.contains(meterRx)){
+            type = Fcp::MEASURE_UNIT_METER;
+        }
+
+        double units = GetUmInUnit(type);
+        //callback_ifc->UnitsCallback(type, units);
+        float precision = match.captured(2).toFloat();
+        //callback_ifc->PrecisionCallback((int)precision);
     }
 
     rx.setPattern("(" + FLOAT_NUM + "),(" + FLOAT_NUM + ")");
     match = rx.match(line);
     if(match.hasMatch())
     {
+        int unitType = (int)match.captured(1).toFloat();
+        double units = GetUmInUnit(unitType);
 
+        //callback_ifc->UnitsCallback(type, units);
+        float precision = match.captured(4).toFloat();
+        //callback_ifc->PrecisionCallback((int)precision);
     }
 
     rx.setPattern(udRx + WSEATER + assignRx + WSEATER +"(" + FLOAT_NUM + "),(" + FLOAT_NUM + ")");
     match = rx.match(line);
     if(match.hasMatch())
     {
-
+        int unitType = Fcp::MEASURE_UNIT_UD;
+        double units = match.captured(1).toFloat();
+        //callback_ifc->UnitsCallback(type, units);
+        float precision = match.captured(4).toFloat();
+        //callback_ifc->PrecisionCallback((int)precision);
     }
 }
 
 void PkgParser::parseExtents(const QString& line)
 {
-    rx.setPattern("(" + NUM + "),(" + NUM + ")");
+    rx.setPattern("(" + FLOAT_NUM + "),(" + FLOAT_NUM + ")");
     matchIter = rx.globalMatch(line);
     if(matchIter.hasNext())
     {
+        ME_point p1, p2;
         match = matchIter.next();
-        int x = match.captured(1).toInt();
-        int y = match.captured(2).toInt();
+        p1.x = match.captured(1).toInt();
+        p1.y = match.captured(4).toInt();
 
         match = matchIter.next();
-        int a = match.captured(1).toInt();
-        int b = match.captured(2).toInt();
-        qDebug() << x << y << a << b;
+        p2.x = match.captured(1).toInt();
+        p2.y = match.captured(4).toInt();
+        //callback_ifc->ExtentsCallback(p1, p2);
     }
 }
 
@@ -284,12 +345,14 @@ void PkgParser::parsePartNumber(const QString& line)
     match = rx.match(line);
     if(match.hasMatch())
     {
-        qDebug() << match.captured(1);
+        QString num = match.captured(1);
+        callback_ifc->PartNumberCallback(num.toStdString());
     }
 }
 
 void PkgParser::parsePadstackDescList(QTextStream& in)
 {
+    QString prevLine;
     while(!in.atEnd())
     {
         QString line = in.readLine();
@@ -301,6 +364,9 @@ void PkgParser::parsePadstackDescList(QTextStream& in)
         match = rx.match(line);
         if(match.hasMatch())
         {
+            QString figure = match.captured();
+            qDebug() << figure;
+            //callback_ifc->PadstackElementLayer(figure.toStdString());
             parseCircle(in);
         }
 
@@ -308,6 +374,9 @@ void PkgParser::parsePadstackDescList(QTextStream& in)
         match = rx.match(line);
         if(match.hasMatch())
         {
+            QString figure = match.captured();
+            qDebug() << figure;
+            //callback_ifc->PadstackElementLayer(figure.toStdString());
             parseRect(in);
         }
 
@@ -315,6 +384,9 @@ void PkgParser::parsePadstackDescList(QTextStream& in)
         match = rx.match(line);
         if(match.hasMatch())
         {
+            QString figure = match.captured();
+            qDebug() << figure;
+            //callback_ifc->PadstackElementLayer(figure.toStdString());
             parseRegPoly(in);
         }
 
@@ -322,6 +394,9 @@ void PkgParser::parsePadstackDescList(QTextStream& in)
         match = rx.match(line);
         if(match.hasMatch())
         {
+            QString figure = match.captured();
+            qDebug() << figure;
+            //callback_ifc->PadstackElementLayer(figure.toStdString());
             parsePoly(in);
         }
 
@@ -329,9 +404,91 @@ void PkgParser::parsePadstackDescList(QTextStream& in)
         match = rx.match(line);
         if(match.hasMatch())
         {
+            QString figure = match.captured();
+            qDebug() << figure;
+            //callback_ifc->PadstackElementLayer(figure.toStdString());
             parsePolyArc(in);
         }
+
+        prevLine = line;
     }
+}
+
+void PkgParser::parsePolyArc(QTextStream& in)
+{
+    PolyArcInfo poly;
+    while(!in.atEnd())
+    {
+        QString line = in.readLine();
+        if(line.contains('}')){
+            break;
+        }
+
+        rx.setPattern(cutRx);
+        match = rx.match(line);
+        if(match.hasMatch())
+        {
+            bool cut = parseBool(line);
+            poly.cut = cut;
+        }
+
+        rx.setPattern(lineColorRx);
+        match = rx.match(line);
+        if(match.hasMatch())
+        {
+            ME_color color = parseColor(line);
+            poly.line_color = color;
+        }
+
+        rx.setPattern(lineWidthRx);
+        match = rx.match(line);
+        if(match.hasMatch())
+        {
+            float width = parseCoord(line);
+            poly.line_width = width;
+        }
+
+        rx.setPattern(fillingColorRx);
+        match = rx.match(line);
+        if(match.hasMatch())
+        {
+            ME_color color = parseColor(line);
+            poly.filling_color = color;
+        }
+
+        rx.setPattern(fillRx);
+        match = rx.match(line);
+        if(match.hasMatch())
+        {
+            bool fill = parseBool(line);
+            poly.fill = fill;
+        }
+
+        rx.setPattern(locationRx);
+        match = rx.match(line);
+        if(match.hasMatch())
+        {
+            ME_point location = parsePoint(line);
+            poly.position = location;
+        }
+
+        rx.setPattern(pointsRx);
+        match = rx.match(line);
+        if(match.hasMatch())
+        {
+            Segments segments = parseSegments(line);
+            if(segments.points.size() == 4)
+            {
+                segments.points.pop_back();
+            }
+            std::vector<ME_polyarc_segment> *pp = new std::vector<ME_polyarc_segment>();
+        ME_polyarc
+            poly.points = points;
+        }
+    }
+
+    //callback_ifc->PadstackElemBumpPolyCallback(poly.cut, poly.line_color, poly.line_width, poly.filling_color, poly.fill, poly.position, poly.points);
+    //callback_ifc->PadstackElementPolyCallback(poly.cut, poly.line_color, poly.line_width, poly.filling_color, poly.fill, poly.position, poly.points);
 }
 
 void PkgParser::parsePoly(QTextStream& in)
@@ -348,6 +505,7 @@ void PkgParser::parsePoly(QTextStream& in)
         if(match.hasMatch())
         {
             bool cut = parseBool(line);
+            qDebug() << cut;
         }
 
         rx.setPattern(lineColorRx);
@@ -397,6 +555,7 @@ void PkgParser::parsePoly(QTextStream& in)
 
 void PkgParser::parseRegPoly(QTextStream& in)
 {
+    RegPolyInfo poly;
     while(!in.atEnd())
     {
         QString line = in.readLine();
@@ -409,13 +568,15 @@ void PkgParser::parseRegPoly(QTextStream& in)
         if(match.hasMatch())
         {
             bool cut = parseBool(line);
+            poly.cut = cut;
         }
 
         rx.setPattern(lineColorRx);
         match = rx.match(line);
         if(match.hasMatch())
         {
-            ME_color* color = parseColor(line);
+            ME_color color = parseColor(line);
+            poly.line_color = color;
         }
 
         rx.setPattern(lineWidthRx);
@@ -423,13 +584,15 @@ void PkgParser::parseRegPoly(QTextStream& in)
         if(match.hasMatch())
         {
             float width = parseCoord(line);
+            poly.line_width = width;
         }
 
         rx.setPattern(fillingColorRx);
         match = rx.match(line);
         if(match.hasMatch())
         {
-            ME_color* color = parseColor(line);
+            ME_color color = parseColor(line);
+            poly.filling_color = color;
         }
 
         rx.setPattern(fillRx);
@@ -437,13 +600,15 @@ void PkgParser::parseRegPoly(QTextStream& in)
         if(match.hasMatch())
         {
             bool fill = parseBool(line);
+            poly.fill = fill;
         }
 
         rx.setPattern(locationRx);
         match = rx.match(line);
         if(match.hasMatch())
         {
-            ME_point* location = parsePoint(line);
+            ME_point location = parsePoint(line);
+            poly.position = location;
         }
 
         rx.setPattern(vertexCountRx);
@@ -451,6 +616,7 @@ void PkgParser::parseRegPoly(QTextStream& in)
         if(match.hasMatch())
         {
             float vertexCount = parseCoord(line);
+            poly.vertex_count = vertexCount;
         }
 
         rx.setPattern(radiusRx);
@@ -458,6 +624,7 @@ void PkgParser::parseRegPoly(QTextStream& in)
         if(match.hasMatch())
         {
             float radius = parseCoord(line);
+            poly.radius = radius;
         }
 
         rx.setPattern(angleRx);
@@ -465,6 +632,7 @@ void PkgParser::parseRegPoly(QTextStream& in)
         if(match.hasMatch())
         {
             float angle = parseCoord(line);
+            poly.rotation = angle;
         }
 
         rx.setPattern(typeRx);
@@ -472,6 +640,7 @@ void PkgParser::parseRegPoly(QTextStream& in)
         if(match.hasMatch())
         {
             bool type = parseBool(line);
+            poly.InsertedCircle = type;
         }
 
         rx.setPattern(angleTypeRx);
@@ -479,12 +648,18 @@ void PkgParser::parseRegPoly(QTextStream& in)
         if(match.hasMatch())
         {
             bool angleType = parseBool(line);
+            poly.RotationToEdgeNormalFlag = angleType;
         }
     }
+
+    //callback_ifc->PadstackElemBumpRegPolyCallback(poly.cut, poly.line_color, poly.line_width, poly.filling_color, poly.fill, poly.position, poly.radius, poly.vertex_count, poly.rotation, poly.InsertedCircle, poly.RotationToEdgeNormalFlag);;
+    //callback_ifc->PadstackElementRegPolyCallback(poly.cut, poly.line_color, poly.line_width, poly.filling_color, poly.fill, poly.position, poly.radius, poly.vertex_count, poly.rotation, poly.InsertedCircle, poly.RotationToEdgeNormalFlag);;
 }
 
 void PkgParser::parseRect(QTextStream& in)
 {
+    bool point = false;
+    RectangleInfo rect;
     while(!in.atEnd())
     {
         QString line = in.readLine();
@@ -497,13 +672,15 @@ void PkgParser::parseRect(QTextStream& in)
         if(match.hasMatch())
         {
             bool cut = parseBool(line);
+            rect.cut = cut;
         }
 
         rx.setPattern(lineColorRx);
         match = rx.match(line);
         if(match.hasMatch())
         {
-            ME_color* color = parseColor(line);
+            ME_color color = parseColor(line);
+            rect.line_color = color;
         }
 
         rx.setPattern(lineWidthRx);
@@ -511,13 +688,15 @@ void PkgParser::parseRect(QTextStream& in)
         if(match.hasMatch())
         {
             float width = parseCoord(line);
+            rect.line_width = width;
         }
 
         rx.setPattern(fillingColorRx);
         match = rx.match(line);
         if(match.hasMatch())
         {
-            ME_color* color = parseColor(line);
+            ME_color color = parseColor(line);
+            rect.filling_color = color;
         }
 
         rx.setPattern(fillRx);
@@ -525,27 +704,44 @@ void PkgParser::parseRect(QTextStream& in)
         if(match.hasMatch())
         {
             bool fill = parseBool(line);
+            rect.fill = fill;
         }
 
         rx.setPattern(locationRx);
         match = rx.match(line);
         if(match.hasMatch())
         {
-            ME_point* location = parsePoint(line);
+            ME_point location = parsePoint(line);
+            rect.position = location;
         }
 
         rx.setPattern(point2Rx);
         match = rx.match(line);
         if(match.hasMatch())
         {
-            ME_point* point2 = parsePoint(line);
+            ME_point point2 = parsePoint(line);
+            if(point){
+                rect.p1.x = rect.p2.x;
+                rect.p1.y = rect.p2.y;
+                rect.p2.x = rect.p1.x + point2.x;
+                rect.p2.y = rect.p1.y + point2.y;
+            } else
+            {
+                rect.p1.x = 0.0;
+                rect.p1.y = 0.0;
+                rect.p2 = point2;
+            }
+            point = true;
         }
-
     }
+
+    //callback_ifc->PadstackElemBumpRectangleCallback(rect.cut,rect.line_color, rect.line_width, rect.filling_color, rect.fill, rect.position, rect.p1, rect.p2);
+    //callback_ifc->PadstackElementRectangleCallback(rect.cut,rect.line_color, rect.line_width, rect.filling_color, rect.fill, rect.position, rect.p1, rect.p2);
 }
 
 void PkgParser::parseCircle(QTextStream& in)
 {
+    CircleInfo circle;
     while(!in.atEnd())
     {
         QString line = in.readLine();
@@ -558,13 +754,15 @@ void PkgParser::parseCircle(QTextStream& in)
         if(match.hasMatch())
         {
             bool cut = parseBool(line);
+            circle.cut = cut;
         }
 
         rx.setPattern(lineColorRx);
         match = rx.match(line);
         if(match.hasMatch())
         {
-            ME_color* color = parseColor(line);
+            ME_color color = parseColor(line);
+            circle.line_color = color;
         }
 
         rx.setPattern(lineWidthRx);
@@ -572,13 +770,15 @@ void PkgParser::parseCircle(QTextStream& in)
         if(match.hasMatch())
         {
             float width = parseCoord(line);
+            circle.line_width = width;
         }
 
         rx.setPattern(fillingColorRx);
         match = rx.match(line);
         if(match.hasMatch())
         {
-            ME_color* color = parseColor(line);
+            ME_color color = parseColor(line);
+            circle.filling_color = color;
         }
 
         rx.setPattern(fillRx);
@@ -586,13 +786,15 @@ void PkgParser::parseCircle(QTextStream& in)
         if(match.hasMatch())
         {
             bool fill = parseBool(line);
+            circle.fill = fill;
         }
 
         rx.setPattern(locationRx);
         match = rx.match(line);
         if(match.hasMatch())
         {
-            ME_point* location = parsePoint(line);
+            ME_point location = parsePoint(line);
+            circle.position = location;
         }
 
         rx.setPattern(radiusRx);
@@ -600,8 +802,12 @@ void PkgParser::parseCircle(QTextStream& in)
         if(match.hasMatch())
         {
             float radius = parseCoord(line);
+            circle.radius = radius;
         }
     }
+
+    //callback_ifc->PadstackElemBumpCircleCallback(circle.cut, circle.line_color, circle.line_width, circle.filling_color, circle.fill, circle.position, circle.radius);
+    //callback_ifc->PadstackElementCircleCallback(circle.cut, circle.line_color, circle.line_width, circle.filling_color, circle.fill, circle.position, circle.radius);
 }
 
 bool PkgParser::parseBool(const QString& line)
@@ -726,9 +932,9 @@ QString PkgParser::parseName(const QString& line)
     return str;
 }
 
-ME_color* PkgParser::parseColor(const QString& line)
+ME_color PkgParser::parseColor(const QString& line)
 {
-    ME_color* color = nullptr;
+    ME_color color;
     rx.setPattern(leftP + "(" + FLOAT_NUM + ")," + WSEATER + "(" + FLOAT_NUM + "),"  + WSEATER +  "(" + FLOAT_NUM + ")" + rightP);
     match = rx.match(line);
     if(match.hasMatch())
@@ -737,10 +943,9 @@ ME_color* PkgParser::parseColor(const QString& line)
         float g = match.captured(4).toFloat();
         float b = match.captured(7).toFloat();
 
-        color = new ME_color();
-        color->R = (char)r;
-        color->G = (char)g;
-        color->B = (char)b;
+        color.R = (char)r;
+        color.G = (char)g;
+        color.B = (char)b;
     }
 
     return color;
@@ -749,9 +954,8 @@ ME_color* PkgParser::parseColor(const QString& line)
 std::vector<ME_point> PkgParser::parsePoints(const QString& line)
 {
     std::vector<ME_point> points;
-    QString test("((1, 2) (3, 4), (5, 6), (7, 8))");
     rx.setPattern(leftP + "(" + FLOAT_NUM + ")," + WSEATER + "(" + FLOAT_NUM + ")" + rightP);
-    matchIter = rx.globalMatch(test);
+    matchIter = rx.globalMatch(line);
     while(matchIter.hasNext())
     {
         match = matchIter.next();
@@ -763,12 +967,12 @@ std::vector<ME_point> PkgParser::parsePoints(const QString& line)
         points.push_back(point);
     }
 
-    qDebug() << points;
+    return points;
 }
 
-ME_point* PkgParser::parsePoint(const QString& line)
+ME_point PkgParser::parsePoint(const QString& line)
 {
-    ME_point* point = nullptr;
+    ME_point point;
     rx.setPattern(leftP + "(" + FLOAT_NUM + ")," + WSEATER + "(" + FLOAT_NUM + ")" + rightP);
     match = rx.match(line);
     if(match.hasMatch())
@@ -776,10 +980,100 @@ ME_point* PkgParser::parsePoint(const QString& line)
         float x = match.captured(1).toFloat();
         float y = match.captured(4).toFloat();
 
-        point = new ME_point();
-        point->x = x;
-        point->y = y;
+        point.x = x;
+        point.y = y;
     }
 
     return point;
+}
+
+ME_polyarc_segment PkgParser::parseSegments(const QString& line)
+{
+    ME_polyarc_segment segments;
+    bool arc = false;
+    //Determine segment type
+    rx.setPattern(R"(.+\),)");
+    match = rx.match(line);
+    if(match.hasMatch())
+    {
+        QString str = match.captured();
+        rx.setPattern(FLOAT_NUM);
+        matchIter = rx.globalMatch(str);
+        int count = 0;
+        while(matchIter.hasNext())
+        {
+            matchIter.next();
+            count++;
+        }
+        if (count % 3 == 0){
+            arc = true;
+        }else{
+            arc = false;
+        }
+    }
+
+    if (arc)
+    {
+    //Arc segments
+        rx.setPattern(leftP + "(" + FLOAT_NUM + ")," + WSEATER + "(" + FLOAT_NUM + ")" + rightP);
+    std::vector<ME_point> points;
+        matchIter = rx.globalMatch(line);
+        while(matchIter.hasNext())
+        {
+            match = matchIter.next();
+            float x = match.captured(1).toFloat();
+            float y = match.captured(4).toFloat();
+
+            ME_point point;
+            point.x = x;
+            point.y = y;
+            points.push_back(point);
+        }
+
+        segments.set()
+    } else {
+
+        //Linera segments
+        rx.setPattern(leftP + "(" + FLOAT_NUM + ")," + WSEATER + "(" + FLOAT_NUM + ")" + rightP);
+
+        matchIter = rx.globalMatch(line);
+        while(matchIter.hasNext())
+        {
+            match = matchIter.next();
+            float x = match.captured(1).toFloat();
+            float y = match.captured(4).toFloat();
+
+            ME_point point;
+            point.x = x;
+            point.y = y;
+            segments.points.push_back(point);
+        }
+    }
+
+    return segments;
+}
+
+double PkgParser::GetUmInUnit(int units) {
+  switch (units) {
+  case 0: // meter
+    return 1.0E6;
+  case 1: // dM
+    return 1.0E5;
+  case 2: // cM
+    return 1.0E4;
+  case 3: // mM
+    return 1.0E3;
+  case 4: // uM
+    return 1.0;
+  case 5: // nM
+    return 1.0E-3;
+  case 6: // th
+    return 0.254E4;
+  case 7: // Mil
+    return 0.254E2;
+  case 8: // user defined
+    return 1.0E2;
+  default:
+    return 0;
+  }
 }

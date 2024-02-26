@@ -8,6 +8,8 @@
 #include<QRegularExpressionMatchIterator>
 #include "commonstruct.h"
 #include "defs.h"
+#include "FcpPkgReader.h"
+
 
 class PkgParser
 {
@@ -22,6 +24,8 @@ public:
         UNDEF
     };
 private:
+    PKGReaderCallbackI *callback_ifc;
+
     int parsePkg();
 
     void parsePkgFile(QTextStream& textStream);
@@ -36,21 +40,22 @@ private:
     void parsePinList(QTextStream& in);
     void parsePinFunctions(QTextStream& in);
     void parsePadstackDescList(QTextStream& in);
-
     void parsePartNumber(const QString& line);
-//    void parseOutlineDesc(const QString& line);
-//    void parsePadstackDesc(const QString& line);
 
     //PinList values
     QString parseName(const QString& line);
     SignalDir parsePinDir(const QString& line);
     float parseCoord(const QString& line);
-    ME_color* parseColor(const QString& line);
+    ME_color parseColor(const QString& line);
 
     //PadStack values
     bool parseBool(const QString& line);
-    ME_point* parsePoint(const QString& line);
+    ME_point parsePoint(const QString& line);
     std::vector<ME_point> parsePoints(const QString& line);
+    std::vector<ME_polyarc_segment> parseSegments(const QString& line);
+
+    //Helper functions
+    double GetUmInUnit(int units);
 
     void parseCircle(QTextStream& in);
     void parseRect(QTextStream& in);
@@ -99,6 +104,7 @@ private:
     QString pointsRx = QString("Points:");
     QString point2Rx = QString("Point2:");
     QString segmentsRx = QString("Segments:");
+    QString pointRx = QString(leftP + WSEATER + FLOAT_NUM + "," + WSEATER + FLOAT_NUM + WSEATER + rightP);
 
     QString circleRx = QString("Circle");
     QString rectRx = QString("Rect");
